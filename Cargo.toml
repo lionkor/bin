@@ -15,7 +15,6 @@ bytes = { version = "1.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = { version = "0.9" }
 gpw = "0.1"
-actix = "0.13"
 actix-web = "4.11"
 htmlescape = "0.3"
 askama = "0.14"
