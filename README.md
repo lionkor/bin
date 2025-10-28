@@ -1,35 +1,23 @@
 I'm maintaining this fork for myself. Feel free to back-merge or open PRs and issues.
 
 # bin
-a paste bin.
+A paste bin with an SQLite database.
 
-A paste bin that's actually minimalist. No database requirement, no commenting functionality, no self-destructing or time bomb messages and no social media integration—just an application to quickly send snippets of text to people.
+A paste bin that's actually minimalist. No database requirement (because we use SQLite), no commenting functionality, no self-destructing or time bomb messages and no social media integration—just an application to quickly send snippets of text to people.
 
-[bin](https://bin.gy/) is written in Rust in around 300 lines of code. It's fast, it's simple, there's code highlighting and you can ⌘+A without going to the 'plain' page. It's revolutionary in the paste bin industry, disrupting markets and pushing boundaries never seen before.
+Allows you to Ctrl+A without selecting anything but the paste.
 
-##### so how do you get bin?
+##### How to build
 
-Download the latest version from the [releases](https://github.com/w4/bin/releases) page, extract it and run the `./bin` executable. You can also compile it from source using Cargo if you swing that way:
+Compile it from source using `cargo build --release`. Get cargo at https://rustup.rs.
 
-```bash
-# nix-shell provides an environment with rust/cargo installed
-$ nix-shell
-
-[nix-shell:~/Code/bin]$ cargo build --release
-   Compiling bin v1.0.0 (/Users/jordanjd/Code/bin)
-    Finished release [optimized] target(s) in 3.61s
-
-[nix-shell:~/Code/bin]$ ./target/release/bin
-    ...
-```
-
-##### how do you run it?
+##### How to run
 
 ```bash
 $ ./bin
 ```
 
-##### funny, what settings are there?
+##### Configuration
 
 ```
 $ ./bin
@@ -42,21 +30,21 @@ Positional Arguments:
   bind_addr         socket address to bind to (default: 127.0.0.1:8820)
 
 Options:
-  --buffer-size     maximum amount of pastes to store before rotating (default:
-                    1000)
   --max-paste-size  maximum paste size in bytes (default. 32kB)
-  --help            display usage information
+  --title           title of the website (default: bin.)
+  --db-path         path to the database file (default: ./pastes.db)
+  --help, help      display usage information
 ```
 
 ##### is there curl support?
 
 ```bash
-$ curl -X PUT --data 'hello world' https://bin.gy
-https://bin.gy/cateettary
-$ curl https://bin.gy/cateettary
+$ curl -X PUT --data 'hello world' https://<your-domain>
+https://<your-domain>/cateettary
+$ curl https://<your-domain>/cateettary
 hello world
 ```
 
-##### how does syntax highlighting work?
+##### How does syntax highlighting work?
 
 To get syntax highlighting you need to add the file extension at the end of your paste URL.
