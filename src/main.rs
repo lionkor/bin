@@ -171,14 +171,14 @@ async fn show_paste(
             .content_type("text/plain; charset=utf-8")
             .body(entry))
     } else {
-        let data = std::str::from_utf8(entry.as_ref())?;
+        let data = String::from_utf8_lossy(entry.as_ref());
 
         let code_highlighted = match ext {
-            Some(extension) => match highlight(data, extension) {
+            Some(extension) => match highlight(&data, extension) {
                 Some(html) => html,
                 None => return Err(NotFound.into()),
             },
-            None => htmlescape::encode_minimal(data),
+            None => htmlescape::encode_minimal(&data),
         };
 
         // Add <code> tags to enable line numbering with CSS
