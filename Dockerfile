@@ -7,7 +7,6 @@ RUN cargo build --release
 
 FROM scratch
 COPY --from=builder /sources/target/release/bin /pastebin
-COPY --from=builder /etc/passwd /etc/passwd
 
 EXPOSE 8000
 ENTRYPOINT ["/pastebin", "0.0.0.0:8000", "--db-path", "/data/pastes.db"]
