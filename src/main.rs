@@ -26,6 +26,10 @@ use std::{
 };
 use syntect::html::{ClassStyle, css_for_theme_with_class_style};
 
+pub struct Customization {
+    title: String,
+}
+
 #[derive(argh::FromArgs, Clone)]
 /// a pastebin.
 pub struct BinArgs {
@@ -41,6 +45,9 @@ pub struct BinArgs {
     /// maximum paste size in bytes (default. 32kB)
     #[argh(option, default = "32 * 1024")]
     max_paste_size: usize,
+    /// title of the website
+    #[argh(option, default = r#"String::from("bin.")"#)]
+    title: String,
 }
 
 #[actix_web::main]
@@ -62,6 +69,9 @@ async fn main() -> std::io::Result<()> {
                 .app_data(store.clone())
                 .app_data(PayloadConfig::default().limit(args.max_paste_size))
                 .app_data(FormConfig::default().limit(args.max_paste_size))
+                .app_data(Customization {
+                    title: args.title.clone(),
+                })
                 .wrap(actix_web::middleware::Compress::default())
                 .route("/", web::get().to(index))
                 .route("/", web::post().to(submit))
@@ -84,10 +94,12 @@ async fn main() -> std::io::Result<()> {
 
 #[derive(Template)]
 #[template(path = "index.html")]
-struct Index;
+struct Index {
+    title: String,
+}
 
-async fn index(req: HttpRequest) -> Result<HttpResponse, Error> {
-    render_template(&req, &Index)
+async fn index(req: HttpRequest, customization: Data<Customization>) -> Result<HttpResponse, Error> {
+    render_template(&req, &Index { title: customization.title.clone() })
 }
 
 #[derive(serde::Deserialize)]
@@ -125,6 +137,7 @@ async fn submit_raw(
 #[template(path = "paste.html")]
 struct ShowPaste {
     content: String,
+    title: String,
 }
 
 async fn show_paste(
@@ -132,6 +145,7 @@ async fn show_paste(
     key: actix_web::web::Path<String>,
     plaintext: IsPlaintextRequest,
     store: Data<PasteStore>,
+    customization: Data<Customization>,
 ) -> Result<HttpResponse, Error> {
     let mut splitter = key.splitn(2, '.');
     let key = splitter.next().unwrap();
@@ -160,7 +174,7 @@ async fn show_paste(
             code_highlighted.replace('\n', "</code><code>")
         );
 
-        render_template(&req, &ShowPaste { content })
+        render_template(&req, &ShowPaste { content, title: customization.title.clone() })
     }
 }
 
