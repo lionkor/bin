@@ -1,25 +1,43 @@
 use actix_web::web::Bytes;
-use linked_hash_map::LinkedHashMap;
-use parking_lot::RwLock;
 use rand::{Rng, distr::Alphanumeric, rng};
-use std::{cell::RefCell, sync::LazyLock};
+use std::cell::RefCell;
 
-pub type PasteStore = RwLock<LinkedHashMap<String, Bytes>>;
+pub struct PasteStore {
+    db: sqlite::ConnectionThreadSafe,
+}
 
-static BUFFER_SIZE: LazyLock<usize> =
-    LazyLock::new(|| argh::from_env::<crate::BinArgs>().buffer_size);
+impl PasteStore {
+    pub fn new(db_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let db = sqlite::Connection::open_thread_safe(db_path)?;
+        db.execute(r#"CREATE TABLE IF NOT EXISTS pastes (id TEXT, data BLOB);"#)?;
+        Ok(Self { db })
+    }
 
-/// Ensures `ENTRIES` is less than the size of `BIN_BUFFER_SIZE`. If it isn't then
-/// `ENTRIES.len() - BIN_BUFFER_SIZE` elements will be popped off the front of the map.
-///
-/// During the purge, `ENTRIES` is locked and the current thread will block.
-fn purge_old(entries: &mut LinkedHashMap<String, Bytes>) {
-    if entries.len() > *BUFFER_SIZE {
-        let to_remove = entries.len() - *BUFFER_SIZE;
+    pub fn store_paste(&self, id: String, content: Bytes) {
+        self.db
+            .prepare("INSERT INTO pastes (id, data) VALUES (?, ?);")
+            .and_then(|mut stmt| {
+                stmt.bind((1, id.as_str()))?;
+                stmt.bind((2, content.iter().as_slice()))?;
+                stmt.next()
+            })
+            .ok();
+    }
 
-        for _ in 0..to_remove {
-            entries.pop_front();
-        }
+    pub fn get_paste(&self, id: &str) -> Option<Bytes> {
+        self.db
+            .prepare("SELECT data FROM pastes WHERE id = ?;")
+            .and_then(|mut stmt| {
+                stmt.bind((1, id))?;
+                if let sqlite::State::Row = stmt.next()? {
+                    let data: Vec<u8> = stmt.read(0)?;
+                    Ok(Some(Bytes::from(data)))
+                } else {
+                    Ok(None)
+                }
+            })
+            .ok()
+            .flatten()
     }
 }
 
@@ -34,21 +52,4 @@ pub fn generate_id() -> String {
             .map(char::from)
             .collect()
     })
-}
-
-/// Stores a paste under the given id
-pub fn store_paste(entries: &PasteStore, id: String, content: Bytes) {
-    let mut entries = entries.write();
-
-    purge_old(&mut entries);
-
-    entries.insert(id, content);
-}
-
-/// Get a paste by id.
-///
-/// Returns `None` if the paste doesn't exist.
-pub fn get_paste(entries: &PasteStore, id: &str) -> Option<Bytes> {
-    // need to box the guard until owning_ref understands Pin is a stable address
-    entries.read().get(id).cloned()
 }

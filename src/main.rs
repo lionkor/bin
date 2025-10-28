@@ -9,7 +9,7 @@ mod params;
 use crate::{
     errors::{InternalServerError, NotFound},
     highlight::highlight,
-    io::{PasteStore, generate_id, get_paste, store_paste},
+    io::{PasteStore, generate_id},
     params::{HostHeader, IsPlaintextRequest},
 };
 
@@ -39,27 +39,33 @@ pub struct BinArgs {
         default = "SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8820)"
     )]
     bind_addr: SocketAddr,
-    /// maximum amount of pastes to store before rotating (default: 1000)
-    #[argh(option, default = "1000")]
-    buffer_size: usize,
     /// maximum paste size in bytes (default. 32kB)
     #[argh(option, default = "32 * 1024")]
     max_paste_size: usize,
-    /// title of the website
+    /// title of the website (default: bin.)
     #[argh(option, default = r#"String::from("bin.")"#)]
     title: String,
+    /// path to the database file (default: ./pastes.db)
+    #[argh(option, default = r#"String::from("./pastes.db")"#)]
+    db_path: String,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     pretty_env_logger::formatted_builder()
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Debug)
         .parse_default_env()
         .init();
 
     let args: BinArgs = argh::from_env();
 
-    let store = Data::new(PasteStore::default());
+    let store = match PasteStore::new(&args.db_path) {
+        Ok(s) => Data::new(s),
+        Err(e) => {
+            error!("Failed to initialize database at {}: {}", args.db_path, e);
+            std::process::exit(1);
+        }
+    };
 
     let server = HttpServer::new({
         let args = args.clone();
@@ -98,8 +104,16 @@ struct Index {
     title: String,
 }
 
-async fn index(req: HttpRequest, customization: Data<Customization>) -> Result<HttpResponse, Error> {
-    render_template(&req, &Index { title: customization.title.clone() })
+async fn index(
+    req: HttpRequest,
+    customization: Data<Customization>,
+) -> Result<HttpResponse, Error> {
+    render_template(
+        &req,
+        &Index {
+            title: customization.title.clone(),
+        },
+    )
 }
 
 #[derive(serde::Deserialize)]
@@ -110,7 +124,7 @@ struct IndexForm {
 async fn submit(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
     let id = generate_id();
     let uri = format!("/{id}");
-    store_paste(&store, id, input.into_inner().val);
+    store.store_paste(id, input.into_inner().val);
     HttpResponse::Found()
         .append_header((header::LOCATION, uri))
         .finish()
@@ -128,8 +142,7 @@ async fn submit_raw(
         format!("/{id}\n")
     };
 
-    store_paste(&store, id, data);
-
+    store.store_paste(id, data);
     Ok(uri)
 }
 
@@ -151,7 +164,7 @@ async fn show_paste(
     let key = splitter.next().unwrap();
     let ext = splitter.next();
 
-    let entry = get_paste(&store, key).ok_or(NotFound)?;
+    let entry = store.get_paste(key).ok_or(NotFound)?;
 
     if *plaintext {
         Ok(HttpResponse::Ok()
@@ -174,7 +187,13 @@ async fn show_paste(
             code_highlighted.replace('\n', "</code><code>")
         );
 
-        render_template(&req, &ShowPaste { content, title: customization.title.clone() })
+        render_template(
+            &req,
+            &ShowPaste {
+                content,
+                title: customization.title.clone(),
+            },
+        )
     }
 }
 

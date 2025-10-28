@@ -11,8 +11,6 @@ edition = "2024"
 argh = "0.1"
 log = "0.4"
 pretty_env_logger = "0.5"
-linked-hash-map = "0.5"
-parking_lot = "0.12"
 bytes = { version = "1.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = { version = "0.9" }
@@ -26,6 +24,7 @@ syntect = "5.3"
 tokio = { version = "1.48", features = ["sync"] }
 futures = "0.3"
 time = "0.3.44"
+sqlite = { version = "0.37.0", features = ["bundled"] }
 
 [profile.release]
 lto = true
