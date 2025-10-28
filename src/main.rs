@@ -69,9 +69,9 @@ async fn main() -> std::io::Result<()> {
                 .app_data(store.clone())
                 .app_data(PayloadConfig::default().limit(args.max_paste_size))
                 .app_data(FormConfig::default().limit(args.max_paste_size))
-                .app_data(Customization {
+                .app_data(Data::new(Customization {
                     title: args.title.clone(),
-                })
+                }))
                 .wrap(actix_web::middleware::Compress::default())
                 .route("/", web::get().to(index))
                 .route("/", web::post().to(submit))
