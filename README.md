@@ -1,3 +1,5 @@
+I'm maintaining this fork for myself. Feel free to back-merge or open PRs and issues.
+
 # bin
 a paste bin.
 
