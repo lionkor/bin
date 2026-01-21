@@ -5,7 +5,7 @@ A paste bin with an SQLite database.
 
 A paste bin that's actually minimalist. No database requirement (because we use SQLite), no commenting functionality, no self-destructing or time bomb messages and no social media integration—just an application to quickly send snippets of text to people.
 
-The only "nice to have" is end-to-end encryption, optionally!
+The only "nice to have" is end-to-end encryption, optionally! For this option, JS on the client-side is required, but the site continues working without JS for all other features.
 
 Allows you to Ctrl+A without selecting anything but the paste.
 
