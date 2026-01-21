@@ -83,6 +83,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/", web::post().to(submit))
                 .route("/", web::put().to(submit_raw))
                 .route("/", web::head().to(HttpResponse::MethodNotAllowed))
+                .route("/e", web::post().to(submit_encrypted))
                 .route("/highlight.css", web::get().to(highlight_css))
                 .route("/{paste}", web::get().to(show_paste))
                 .route("/{paste}", web::head().to(HttpResponse::MethodNotAllowed))
@@ -124,7 +125,16 @@ struct IndexForm {
 async fn submit(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
     let id = generate_id();
     let uri = format!("/{id}");
-    store.store_paste(&id, &input.into_inner().val);
+    store.store_paste(&id, &input.into_inner().val, false);
+    HttpResponse::Found()
+        .append_header((header::LOCATION, uri))
+        .finish()
+}
+
+async fn submit_encrypted(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
+    let id = generate_id();
+    let uri = format!("/{id}");
+    store.store_paste(&id, &input.into_inner().val, true);
     HttpResponse::Found()
         .append_header((header::LOCATION, uri))
         .finish()
@@ -142,7 +152,7 @@ async fn submit_raw(
         format!("/{id}\n")
     };
 
-    store.store_paste(&id, &data);
+    store.store_paste(&id, &data, false);
     Ok(uri)
 }
 
@@ -150,6 +160,7 @@ async fn submit_raw(
 #[template(path = "paste.html")]
 struct ShowPaste {
     content: String,
+    encrypted: bool,
     title: String,
 }
 
@@ -164,21 +175,34 @@ async fn show_paste(
     let key = splitter.next().unwrap();
     let ext = splitter.next();
 
-    let entry = store.get_paste(key).ok_or(NotFound)?;
+    let (entry, encrypted) = store.get_paste(key).ok_or(NotFound)?;
 
     if *plaintext {
         Ok(HttpResponse::Ok()
             .content_type("text/plain; charset=utf-8")
             .body(entry))
+    } else if encrypted {
+        let content = match std::str::from_utf8(&entry) {
+            Ok(s) => s.to_string(),
+            Err(_) => return Err(NotFound.into()),
+        };
+        render_template(
+            &req,
+            &ShowPaste {
+                content,
+                encrypted,
+                title: customization.title.clone(),
+            },
+        )
     } else {
-        let data = String::from_utf8_lossy(entry.as_ref());
+        let Ok(data) = std::str::from_utf8(&entry) else { return Err(NotFound.into()) };
 
         let code_highlighted = match ext {
-            Some(extension) => match highlight(&data, extension) {
+            Some(extension) => match highlight(data, extension) {
                 Some(html) => html,
                 None => return Err(NotFound.into()),
             },
-            None => htmlescape::encode_minimal(&data),
+            None => htmlescape::encode_minimal(data),
         };
 
         // Add <code> tags to enable line numbering with CSS
@@ -191,6 +215,7 @@ async fn show_paste(
             &req,
             &ShowPaste {
                 content,
+                encrypted,
                 title: customization.title.clone(),
             },
         )
