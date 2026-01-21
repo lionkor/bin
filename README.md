@@ -47,6 +47,21 @@ $ curl https://<your-domain>/cateettary
 hello world
 ```
 
+For binary files, prefer either:
+```bash
+$ curl -X PUT --data-binary @file.bin https://<your-domain>
+https://<your-domain>/cateettary
+$ curl https://<your-domain>/cateettary
+<contents of file.bin>
+```
+or, simpler:
+```bash
+$ curl -T file.bin https://<your-domain>
+https://<your-domain>/cateettary
+$ curl https://<your-domain>/cateettary
+<contents of file.bin>
+```
+
 ##### How does syntax highlighting work?
 
 To get syntax highlighting you need to add the file extension at the end of your paste URL.
