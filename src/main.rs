@@ -124,7 +124,7 @@ struct IndexForm {
 async fn submit(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
     let id = generate_id();
     let uri = format!("/{id}");
-    store.store_paste(id, input.into_inner().val);
+    store.store_paste(&id, &input.into_inner().val);
     HttpResponse::Found()
         .append_header((header::LOCATION, uri))
         .finish()
@@ -142,7 +142,7 @@ async fn submit_raw(
         format!("/{id}\n")
     };
 
-    store.store_paste(id, data);
+    store.store_paste(&id, &data);
     Ok(uri)
 }
 
