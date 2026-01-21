@@ -38,6 +38,16 @@
         gap: 0.75rem;
     }
 
+    .js-required-decrypt {
+        font-size: 11px;
+        color: rgba(255, 150, 150, 0.9);
+        margin-bottom: 0.5rem;
+    }
+
+    .js-enabled .js-required-decrypt {
+        display: none;
+    }
+
     #decrypt-password {
         background-color: rgba(86, 108, 119, 0.3);
         color: #fff;
@@ -50,6 +60,11 @@
         font-family: inherit;
         flex: 1;
         box-sizing: border-box;
+    }
+
+    #decrypt-password:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
     }
 
     #decrypt-password:focus {
@@ -78,7 +93,12 @@
         white-space: nowrap;
     }
 
-    #decrypt-btn:hover {
+    #decrypt-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    #decrypt-btn:hover:not(:disabled) {
         background: #1976D2;
     }
 
@@ -98,9 +118,10 @@
 <div id="paste-container">
     {% if encrypted %}
         <div id="decrypt-container">
+            <div class="js-required-decrypt">decryption requires javascript</div>
             <div id="decrypt-box">
-                <input type="password" id="decrypt-password" placeholder="Enter password to decrypt">
-                <button id="decrypt-btn">decrypt</button>
+                <input type="password" id="decrypt-password" placeholder="Enter password to decrypt" disabled>
+                <button id="decrypt-btn" disabled>decrypt</button>
             </div>
         </div>
         <pre id="encrypted-content"><code>{{ content }}</code></pre>
@@ -108,6 +129,11 @@
         const enc = new TextEncoder();
         const dec = new TextDecoder();
         const encryptedData = '{{ content }}';
+        
+        // Enable controls when JS is available
+        document.getElementById('decrypt-password').disabled = false;
+        document.getElementById('decrypt-btn').disabled = false;
+        document.getElementById('decrypt-container').classList.add('js-enabled');
         
         async function decryptAESGCM(encoded, password) {
             const data = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));

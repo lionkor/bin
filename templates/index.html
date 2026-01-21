@@ -52,6 +52,13 @@ textarea {
     box-sizing: border-box;
 }
 
+.password-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+}
+
 input[type="password"] {
     background-color: rgba(86, 108, 119, 0.3);
     color: #fff;
@@ -66,6 +73,11 @@ input[type="password"] {
     box-sizing: border-box;
 }
 
+input[type="password"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 input[type="password"]:focus {
     background-color: #566c77;
     border-color: #64b5f6;
@@ -75,6 +87,22 @@ input[type="password"]:focus {
 input[type="password"]::placeholder {
     color: rgba(255, 255, 255, 0.4);
     font-size: 12px;
+}
+
+.js-required {
+    font-size: 11px;
+    color: rgba(255, 150, 150, 0.9);
+    margin-right: auto;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+}
+
+noscript .js-required {
+    display: block;
+}
+
+.js-enabled .js-required {
+    display: none;
 }
 
 button[type="submit"] {
@@ -113,7 +141,10 @@ button[type="submit"]:hover {
     <form id="form" action="/" method="post">
         <textarea id="message" name="val" placeholder="bin something" autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
         <div id="bottom-bar">
-            <input type="password" id="password" autocomplete="off" placeholder="password (optional)">
+            <div class="password-group">
+                <input type="password" id="password" autocomplete="off" placeholder="password (optional)" disabled>
+                <span class="js-required">encryption requires javascript</span>
+            </div>
             <button type="submit" id="submitBtn" title="&#x2318;+&#x23ce;">bin!</button>
         </div>
     </form>
@@ -173,6 +204,10 @@ const password = document.getElementById("password");
 
 // Re-enable textarea on page load (in case user navigated back)
 message.disabled = false;
+
+// Enable password field and hide warning when JS is available
+password.disabled = false;
+document.getElementById('bottom-bar').classList.add('js-enabled');
 
 // Form submit handler
 form.addEventListener("submit", async (event) => {
