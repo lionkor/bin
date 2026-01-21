@@ -257,14 +257,12 @@ form.addEventListener("submit", async (event) => {
             message.value = "";
             password.value = "";
             
-            // Remove any existing hidden inputs to prevent duplicates
-            const existingHidden = form.querySelector('input[type="hidden"][name="val"]');
-            if (existingHidden) {
-                existingHidden.remove();
-            }
+            // Remove name from textarea to prevent duplicate
+            message.removeAttribute('name');
             
-            // Disable the textarea to prevent it from being submitted
-            message.disabled = true;
+            // Remove any existing hidden inputs to prevent duplicates
+            const existingHidden = form.querySelectorAll('input[type="hidden"][name="val"]');
+            existingHidden.forEach(h => h.remove());
             
             // Create hidden input with encrypted data
             const hiddenInput = document.createElement('input');
@@ -278,10 +276,11 @@ form.addEventListener("submit", async (event) => {
             form.submit();
         } catch (e) {
             alert('Encryption failed: ' + e.message);
-            // Re-enable textarea on error
-            message.disabled = false;
+            // Restore textarea name on error
+            message.setAttribute('name', 'val');
         }
     } else {
+        // For non-encrypted submission, just submit normally
         form.action = "/";
         form.submit();
     }

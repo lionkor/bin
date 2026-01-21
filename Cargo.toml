@@ -1,6 +1,6 @@
 [package]
 name = "bin"
-version = "3.0.0"
+version = "3.1.0"
 description = "A fork of bin: A paste bin."
 repository = "https://github.com/lionkor/bin"
 license = "WTFPL OR 0BSD"
