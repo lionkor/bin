@@ -189,7 +189,6 @@ async fn show_paste(
 
     if *plaintext {
         Ok(HttpResponse::Ok()
-            .content_type("text/plain; charset=utf-8")
             .body(entry))
     } else if encrypted {
         let content = match std::str::from_utf8(&entry) {
