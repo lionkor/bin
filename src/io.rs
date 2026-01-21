@@ -19,7 +19,7 @@ impl PasteStore {
             .prepare("INSERT INTO pastes (id, data, encrypted) VALUES (?, ?, ?);")
             .and_then(|mut stmt| {
                 stmt.bind((1, id))?;
-                stmt.bind((2, content.iter().as_slice()))?;
+                stmt.bind((2, content.as_ref()))?;
                 stmt.bind((3, i64::from(encrypted)))?;
                 stmt.next()
             })
@@ -68,7 +68,7 @@ mod tests {
         store.store_paste("hello", &Bytes::from("world"), false);
         let (hello, encrypted) = store.get_paste("hello").unwrap();
         assert_eq!("world".as_bytes(), hello.as_ref());
-        assert_eq!(false, encrypted);
+        assert!(!encrypted);
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         store.store_paste("hello", &Bytes::from(vec![0x0, 0x1, 0x2, 0x3, 0xff]), false);
         let (hello, encrypted) = store.get_paste("hello").unwrap();
         assert_eq!(&[0x0, 0x1, 0x2, 0x3, 0xff], hello.as_ref());
-        assert_eq!(false, encrypted);
+        assert!(!encrypted);
     }
 
     #[test]
@@ -86,6 +86,16 @@ mod tests {
         store.store_paste("hello", &Bytes::new(), false);
         let (hello, encrypted) = store.get_paste("hello").unwrap();
         assert!(hello.is_empty());
-        assert_eq!(false, encrypted);
+        assert!(!encrypted);
     }
+
+    #[test]
+    fn test_binary_with_newline() {
+        let store = PasteStore::new(":memory:").unwrap();
+        store.store_paste("hello", &Bytes::from(vec![0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x0a, 0x57, 0x6f, 0x72, 0x6c, 0x64]), false);
+        let (hello, encrypted) = store.get_paste("hello").unwrap();
+        assert_eq!(&[0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x0a, 0x57, 0x6f, 0x72, 0x6c, 0x64], hello.as_ref());
+        assert!(!encrypted);
+    }
+
 }
