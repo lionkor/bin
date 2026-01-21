@@ -6,16 +6,20 @@ body, html {
     padding: 0;
     height: 100%;
     overflow: hidden;
+    position: fixed;
+    width: 100%;
 }
 
 #container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
     position: fixed;
     top: 0;
     left: 0;
+    bottom: 0;
+    right: 0;
 }
 
 form {
@@ -50,6 +54,7 @@ textarea {
     background: rgba(0, 0, 0, 0.1);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .password-group {
@@ -117,10 +122,18 @@ button[type="submit"] {
     transition: background 0.2s;
     font-family: inherit;
     text-transform: lowercase;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 button[type="submit"]:hover {
     background: #1976D2;
+}
+
+button[type="submit"]:active {
+    background: #1565C0;
 }
 
 @media (max-width: 600px) {
@@ -154,8 +167,17 @@ button[type="submit"]:hover {
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+// Check if Web Crypto API is available
+if (!window.crypto || !window.crypto.subtle) {
+    console.error('Web Crypto API not available. HTTPS required for encryption.');
+}
+
 // AES-GCM encryption with PBKDF2
 async function encryptAESGCM(plaintext, password) {
+    if (!window.crypto || !window.crypto.subtle) {
+        throw new Error('Encryption requires HTTPS. Please access this site over HTTPS.');
+    }
+    
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
 
@@ -202,12 +224,23 @@ const form = document.getElementById("form");
 const message = document.getElementById("message");
 const password = document.getElementById("password");
 
-// Re-enable textarea on page load (in case user navigated back)
-message.disabled = false;
+// Re-enable form elements on page load/show (in case user navigated back)
+window.addEventListener('pageshow', function() {
+    message.disabled = false;
+    password.disabled = false;
+    document.getElementById('bottom-bar').classList.add('js-enabled');
+});
 
-// Enable password field and hide warning when JS is available
+// Initial enable on load
+message.disabled = false;
 password.disabled = false;
 document.getElementById('bottom-bar').classList.add('js-enabled');
+
+// Disable password field if crypto is not available
+if (!window.crypto || !window.crypto.subtle) {
+    password.disabled = true;
+    password.placeholder = 'HTTPS required for encryption';
+}
 
 // Form submit handler
 form.addEventListener("submit", async (event) => {
@@ -217,24 +250,37 @@ form.addEventListener("submit", async (event) => {
     const txt = message.value;
 
     if (pwd) {
-        const encrypted = await encryptAESGCM(txt, pwd);
-        
-        // Create hidden input with encrypted data (never show it in textarea)
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'val';
-        hiddenInput.value = encrypted;
-        form.appendChild(hiddenInput);
-        
-        // Clear sensitive data immediately
-        message.value = "";
-        password.value = "";
-        
-        // Temporarily disable the textarea so it doesn't get submitted
-        message.disabled = true;
-        
-        form.action = "/e";
-        form.submit();
+        try {
+            const encrypted = await encryptAESGCM(txt, pwd);
+            
+            // Clear sensitive data immediately
+            message.value = "";
+            password.value = "";
+            
+            // Remove any existing hidden inputs to prevent duplicates
+            const existingHidden = form.querySelector('input[type="hidden"][name="val"]');
+            if (existingHidden) {
+                existingHidden.remove();
+            }
+            
+            // Disable the textarea to prevent it from being submitted
+            message.disabled = true;
+            
+            // Create hidden input with encrypted data
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'val';
+            hiddenInput.value = encrypted;
+            
+            // Add to original form and submit
+            form.action = '/e';
+            form.appendChild(hiddenInput);
+            form.submit();
+        } catch (e) {
+            alert('Encryption failed: ' + e.message);
+            // Re-enable textarea on error
+            message.disabled = false;
+        }
     } else {
         form.action = "/";
         form.submit();

@@ -7,17 +7,26 @@
     <link rel="help" href="https://github.com/lionkor/bin">
     <style>
         * { box-sizing: border-box; }
-        html, body { margin: 0; }
+        html, body { 
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
         body {
-            height: 100vh;
             padding: 2rem;
             background: #263238;
             color: #B0BEC5;
             line-height: 1.4;
+            overflow: auto;
         }
         body, code, textarea { font-family: monospace; }
         code {
           display: block;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
         }
         {% block styles %}{% endblock styles %}
     </style>

@@ -1,8 +1,21 @@
 {% extends "base.html" %}
 
 {% block styles %}
-    pre {
+    body {
+        padding: 0;
+        overflow: hidden;
+    }
+    
+    #paste-container {
         height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    pre {
+        flex: 1;
         width: 100%;
         margin: 0;
         overflow: auto;
@@ -10,7 +23,10 @@
         font-size: 1rem;
         line-height: inherit;
         counter-reset: line;
+        padding: 2rem;
+        box-sizing: border-box;
     }
+    
     code {
         counter-increment: line;
     }
@@ -29,7 +45,8 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 4px;
         padding: 1rem;
-        margin-bottom: 1rem;
+        margin: 1rem;
+        flex-shrink: 0;
     }
 
     #decrypt-box {
@@ -91,6 +108,10 @@
         font-family: inherit;
         text-transform: lowercase;
         white-space: nowrap;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
     }
 
     #decrypt-btn:disabled {
@@ -101,12 +122,32 @@
     #decrypt-btn:hover:not(:disabled) {
         background: #1976D2;
     }
+    
+    #decrypt-btn:active:not(:disabled) {
+        background: #1565C0;
+    }
 
     #encrypted-content {
         background: #263238;
         color: #fff;
         padding: 1em;
         border-radius: 4px;
+    }
+    
+    @media (max-width: 600px) {
+        pre {
+            padding: 1rem;
+            font-size: 14px;
+        }
+        
+        #decrypt-container {
+            margin: 0.75rem;
+            padding: 0.75rem;
+        }
+        
+        #decrypt-box {
+            gap: 0.5rem;
+        }
     }
 {% endblock styles %}
 
@@ -131,11 +172,20 @@
         const encryptedData = '{{ content }}';
         
         // Enable controls when JS is available
-        document.getElementById('decrypt-password').disabled = false;
-        document.getElementById('decrypt-btn').disabled = false;
-        document.getElementById('decrypt-container').classList.add('js-enabled');
+        if (window.crypto && window.crypto.subtle) {
+            document.getElementById('decrypt-password').disabled = false;
+            document.getElementById('decrypt-btn').disabled = false;
+            document.getElementById('decrypt-container').classList.add('js-enabled');
+        } else {
+            document.querySelector('.js-required-decrypt').textContent = 'decryption requires HTTPS';
+            document.getElementById('decrypt-password').placeholder = 'HTTPS required';
+        }
         
         async function decryptAESGCM(encoded, password) {
+            if (!window.crypto || !window.crypto.subtle) {
+                throw new Error('Decryption requires HTTPS. Please access this site over HTTPS.');
+            }
+            
             const data = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
             const iv = data.slice(16, 28);
