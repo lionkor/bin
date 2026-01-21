@@ -119,22 +119,32 @@ async fn index(
 
 #[derive(serde::Deserialize)]
 struct IndexForm {
-    val: Bytes,
+    val: Option<Bytes>,
 }
 
 async fn submit(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
+    let form = input.into_inner();
+    let val = match form.val {
+        Some(v) if !v.is_empty() => v,
+        _ => return HttpResponse::BadRequest().body("Empty or missing form data. Use HTTP PUT for raw data."),
+    };
     let id = generate_id();
     let uri = format!("/{id}");
-    store.store_paste(&id, &input.into_inner().val, false);
+    store.store_paste(&id, &val, false);
     HttpResponse::Found()
         .append_header((header::LOCATION, uri))
         .finish()
 }
 
 async fn submit_encrypted(input: web::Form<IndexForm>, store: Data<PasteStore>) -> impl Responder {
+    let form = input.into_inner();
+    let val = match form.val {
+        Some(v) if !v.is_empty() => v,
+        _ => return HttpResponse::BadRequest().body("Empty or missing form data. Use HTTP PUT for raw data."),
+    };
     let id = generate_id();
     let uri = format!("/{id}");
-    store.store_paste(&id, &input.into_inner().val, true);
+    store.store_paste(&id, &val, true);
     HttpResponse::Found()
         .append_header((header::LOCATION, uri))
         .finish()
