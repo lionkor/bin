@@ -1,10 +1,10 @@
 [package]
 name = "bin"
-version = "2.1.0"
-description = "a paste bin."
-repository = "https://github.com/w4/bin"
+version = "3.0.0"
+description = "A fork of bin: A paste bin."
+repository = "https://github.com/lionkor/bin"
 license = "WTFPL OR 0BSD"
-authors = ["Jordan Doyle <jordan@doyle.la>"]
+authors = ["Jordan Doyle <jordan@doyle.la>", "Lion Kortlepel <development@kortlepel.com>"]
 edition = "2024"
 
 [dependencies]
@@ -17,7 +17,7 @@ rand = { version = "0.9" }
 gpw = "0.1"
 actix-web = "4.11"
 htmlescape = "0.3"
-askama = "0.14"
+askama = { version = "0.15", features = ["full"] }
 bat = "0.26"
 syntect = "5.3"
 tokio = { version = "1.48", features = ["sync"] }
@@ -29,9 +29,3 @@ sqlite = { version = "0.37.0", features = ["bundled"] }
 lto = true
 codegen-units = 1
 incremental = false
-
-[badges]
-travis-ci = { repository = "w4/bin" }
-is-it-maintained-issue-resolution = { repository = "w4/bin" }
-is-it-maintained-open-issues = { repository = "w4/bin" }
-maintenance = { status = "passively-maintained" }

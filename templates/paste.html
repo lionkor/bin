@@ -23,10 +23,147 @@
         color: #888;
         -webkit-user-select: none;
     }
+
+    #decrypt-container {
+        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    #decrypt-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    #decrypt-password {
+        background-color: rgba(86, 108, 119, 0.3);
+        color: #fff;
+        border: 1px solid rgba(38, 50, 56, 0.5);
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        font-size: 13px;
+        outline: none;
+        transition: all 0.2s;
+        font-family: inherit;
+        flex: 1;
+        box-sizing: border-box;
+    }
+
+    #decrypt-password:focus {
+        background-color: #566c77;
+        border-color: #64b5f6;
+        box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+    }
+
+    #decrypt-password::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 12px;
+    }
+
+    #decrypt-btn {
+        padding: 0.5rem 1.25rem;
+        border: none;
+        border-radius: 4px;
+        background: #2196F3;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-family: inherit;
+        text-transform: lowercase;
+        white-space: nowrap;
+    }
+
+    #decrypt-btn:hover {
+        background: #1976D2;
+    }
+
+    #encrypted-content {
+        background: #263238;
+        color: #fff;
+        padding: 1em;
+        border-radius: 4px;
+    }
 {% endblock styles %}
 
 {% block head %}
     <link rel="stylesheet" type="text/css" href="highlight.css" />
 {% endblock head %}
 
-{% block content %}<pre>{{ content|safe }}</pre>{% endblock content %}
+{% block content %}
+<div id="paste-container">
+    {% if encrypted %}
+        <div id="decrypt-container">
+            <div id="decrypt-box">
+                <input type="password" id="decrypt-password" placeholder="Enter password to decrypt">
+                <button id="decrypt-btn">decrypt</button>
+            </div>
+        </div>
+        <pre id="encrypted-content"><code>{{ content }}</code></pre>
+        <script>
+        const enc = new TextEncoder();
+        const dec = new TextDecoder();
+        const encryptedData = '{{ content }}';
+        
+        async function decryptAESGCM(encoded, password) {
+            const data = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+            const salt = data.slice(0, 16);
+            const iv = data.slice(16, 28);
+            const ciphertext = data.slice(28);
+
+            const keyMaterial = await crypto.subtle.importKey(
+                "raw",
+                enc.encode(password),
+                "PBKDF2",
+                false,
+                ["deriveKey"]
+            );
+
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt,
+                    iterations: 200000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["decrypt"]
+            );
+
+            const plaintext = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv },
+                key,
+                ciphertext
+            );
+
+            return dec.decode(plaintext);
+        }
+        
+        document.getElementById('decrypt-btn').onclick = async function() {
+            const pw = document.getElementById('decrypt-password').value;
+            try {
+                const decrypted = await decryptAESGCM(encryptedData, pw);
+                document.getElementById('encrypted-content').innerHTML = `<code>${decrypted.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>`;
+                document.getElementById('decrypt-container').style.display = 'none';
+            } catch (e) {
+                alert('Decryption failed. Check your password.');
+            }
+        };
+        
+        document.getElementById('decrypt-password').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('decrypt-btn').click();
+            }
+        });
+        </script>
+    {% else %}
+        <pre>{{ content|safe }}</pre>
+    {% endif %}
+</div>
+{% endblock content %}

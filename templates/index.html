@@ -1,66 +1,217 @@
 {% extends "base.html" %}
 
 {% block styles %}
-    form { flex: 1; }
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
 
+#container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+textarea {
+    flex: 1;
+    width: 100%;
+    background: none;
+    border: none;
+    outline: 0;
+    padding: 1rem;
+    resize: none;
+    overflow: auto;
+    color: inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: inherit;
+    box-sizing: border-box;
+}
+
+#bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+
+input[type="password"] {
+    background-color: rgba(86, 108, 119, 0.3);
+    color: #fff;
+    border: 1px solid rgba(38, 50, 56, 0.5);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s;
+    font-family: inherit;
+    width: 180px;
+    box-sizing: border-box;
+}
+
+input[type="password"]:focus {
+    background-color: #566c77;
+    border-color: #64b5f6;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+}
+
+input[type="password"]::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+}
+
+button[type="submit"] {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    border-radius: 4px;
+    background: #2196F3;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+    text-transform: lowercase;
+}
+
+button[type="submit"]:hover {
+    background: #1976D2;
+}
+
+@media (max-width: 600px) {
     textarea {
-        height: 100%;
-        width: 100%;
-
-        background: none;
-        border: none;
-        outline: 0;
-        padding: 0;
-
-        resize: none;
-        overflow: auto;
-
-        color: inherit;
-        font-family: inherit;
-        font-size: 1rem;
-        line-height: inherit;
+        padding: 0.75rem;
+        font-size: 16px;
     }
-
-    button[type="submit"] {
-        position: absolute;
-        bottom: 1rem;
-        right: 1rem;
-
-        height: 3rem;
-        width: 3rem;
-        border: none;
-        border-radius: 50%;
-        background: #2196F3;
-
-        color: white;
-        font-size: 2rem;
-
-        cursor: pointer;
+    
+    #bottom-bar {
+        padding: 0.75rem;
+        gap: 0.75rem;
     }
-
-    button[type="submit"].hidden { display: none; }
+}
 {% endblock styles %}
 
 {% block content %}
-    <form action="/" method="post">
-        <textarea name="val" placeholder="bin something" autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-
-        <button type="submit" title="&#x2318;+&#x23ce;">&#x270e;</button>
+<div id="container">
+    <form id="form" action="/" method="post">
+        <textarea id="message" name="val" placeholder="bin something" autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+        <div id="bottom-bar">
+            <input type="password" id="password" autocomplete="off" placeholder="password (optional)">
+            <button type="submit" id="submitBtn" title="&#x2318;+&#x23ce;">bin!</button>
+        </div>
     </form>
+</div>
 
-    <script>
-        const form = document.querySelector('form');
-        const input = document.querySelector('textarea');
-        const button = document.querySelector('button[type="submit"]');
+<script>
+const enc = new TextEncoder();
+const dec = new TextDecoder();
 
-        const onInput = () => button.classList.toggle('hidden', !input.value);
-        input.addEventListener('input', onInput);
-        onInput();
+// AES-GCM encryption with PBKDF2
+async function encryptAESGCM(plaintext, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
 
-        document.body.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || e.altKey)) {
-                form.submit();
-            }
-        });
-    </script>
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations: 200000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+    );
+
+    const ciphertext = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        enc.encode(plaintext)
+    );
+
+    // Combine salt + iv + ciphertext
+    const combined = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
+    combined.set(salt, 0);
+    combined.set(iv, salt.length);
+    combined.set(new Uint8Array(ciphertext), salt.length + iv.length);
+
+    return btoa(String.fromCharCode(...combined));
+}
+
+
+
+const submitBtn = document.getElementById("submitBtn");
+const form = document.getElementById("form");
+const message = document.getElementById("message");
+const password = document.getElementById("password");
+
+// Re-enable textarea on page load (in case user navigated back)
+message.disabled = false;
+
+// Form submit handler
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const pwd = password.value || "";
+    const txt = message.value;
+
+    if (pwd) {
+        const encrypted = await encryptAESGCM(txt, pwd);
+        
+        // Create hidden input with encrypted data (never show it in textarea)
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'val';
+        hiddenInput.value = encrypted;
+        form.appendChild(hiddenInput);
+        
+        // Clear sensitive data immediately
+        message.value = "";
+        password.value = "";
+        
+        // Temporarily disable the textarea so it doesn't get submitted
+        message.disabled = true;
+        
+        form.action = "/e";
+        form.submit();
+    } else {
+        form.action = "/";
+        form.submit();
+    }
+});
+
+// Optional: Enter+modifier shortcut
+document.body.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || e.altKey)) {
+        form.submit();
+    }
+});
+</script>
+
 {% endblock content %}
