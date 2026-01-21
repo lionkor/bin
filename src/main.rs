@@ -81,7 +81,7 @@ async fn main() -> std::io::Result<()> {
                 .wrap(actix_web::middleware::Compress::default())
                 .route("/", web::get().to(index))
                 .route("/", web::post().to(submit))
-                .route("/", web::put().to(submit_raw))
+                .route("/{filename}", web::put().to(submit_raw))
                 .route("/", web::head().to(HttpResponse::MethodNotAllowed))
                 .route("/e", web::post().to(submit_encrypted))
                 .route("/highlight.css", web::get().to(highlight_css))
